@@ -24,84 +24,134 @@ HTML （最开始的目的是传输超文本，但现在，基本上任何数据
         schema://user:password@host:port/path?query_string#segment
 
 5、总结：
-       URL ——>什么意思，做什么用的
-                        格式是怎么样的
-                         URL编解码
+       URL ——>了解它是什么意思，做什么用的
+               其格式是怎么样的
+               以及URL编解码
 
 6、HTTP协议格式（重要）
 
 （1）HTTP请求的格式（标准）行的方式进行组织
-
-
-
-  HTTP请求：
+    HTTP请求：
        首行：【方法】+【URL】+【版本】
-       Header：请求的属性，冒号分割的键值对；每组属性之间使用\n分隔;遇到
-                      空行表示Header部分结束（请求头结束）
-       Body：空行后面的内容都是Body. Body允许为空字符串。如果Body存在, 
-                   则在Header中会有一个Content-Length属性来标识Body的长度;
-
-
+       Header：请求的属性，冒号分割的键值对；每组属性之间使用\n分隔;遇到空行表示Header部分结束（请求头结束）              
+       Body：空行后面的内容都是Body. Body允许为空字符串。如果Body存在, 则在Header中会有一个Content-Length属性来标识Body的长度;
+                  
 （2）响应的格式（response）
-      响应行/状态行     版本   状态码  状态码描述            HTTP/1.0  200  OK
-      响应头： 值                                                            Content-Length： 6
+      响应行/状态行     版本   状态码  状态码描述        HTTP/1.0  200  OK
+      响应头： 值                                      Content-Length： 6
       ...                     
-      空行                                                                         中国
-      响应正文
+      空行                                            
+      响应正文                                        中国
 
-
-
-
-
- HTTP响应：
+   HTTP响应：
       首行：【版本号】+【状态码】+【状态码解释】
-      Header：请求的属性，冒号分割的键值对；每组属性之间使用\n分隔；遇
-                     到空行表示Header部分结束
-      Body：空行后面的内容都是Body。Body允许为空字符串. 如果Body存在, 
-                 则在Header中会有一个Content-Length属性来标识Body的长度; 如
-                 果服务器返回了一个html页面, 那么html页面内容就是在body中.
+      Header：请求的属性，冒号分割的键值对；每组属性之间使用\n分隔；遇到空行表示Header部分结束        
+      Body：空行后面的内容都是Body。Body允许为空字符串. 如果Body存在, 则在Header中会有一个Content-Length属性来标识Body的长度; 
+            如果服务器返回了一个html页面, 那么html页面内容就是在body中.
+                 
+7、解析响应的过程代码：SimpleHTTPClient
 
-8、解析响应的过程代码：SimpleHTTPClient
-//见2019-12-21-HTTP 、SimpleHTTPCLient
+       import java.io.ByteArrayInputStream;
+       import java.io.FileOutputStream;
+       import java.io.IOException;
+       import java.net.Socket;
+       import java.util.Scanner;
+       
+       public class SimpleHttpClient {
+           public static void main(String[] args) throws IOException {
+               String request = "GET / HTTP/1.0\r\nHost: www.bitedu.vip\r\n\r\n";
+       
+               Socket socket = new Socket("www.bitedu.vip", 80);
+               socket.getOutputStream().write(request.getBytes("UTF-8"));
+               // 版本   状态码     状态描述
+               // 响应头打印
+               // 把响应正文保存下来
+               byte[] bytes = new byte[4096];
+               int 第一次读到的数据长度 = socket.getInputStream().read(bytes);
+               // 假设 4096 字节已经包含 响应行 + 所有响应头 + 一部分正文
+               int index = -1;
+               for (int i = 0; i < 第一次读到的数据长度 - 3; i++) {
+                   if (bytes[i] == '\r' && bytes[i+1] == '\n' && bytes[i+2] == '\r' && bytes[i+3] == '\n') {
+                       index = i;
+                       break;
+                   }
+               }
+               ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes, 0, index + 4);
+               Scanner scanner = new Scanner(byteArrayInputStream, "UTF-8");
+               String statusLine = scanner.nextLine();
+               System.out.println("状态行: " + statusLine);
+               String[] group = statusLine.split(" ");
+               System.out.println("响应版本: " + group[0].trim());
+               System.out.println("响应状态码: " + group[1].trim());
+               System.out.println("响应状态描述: " + group[2].trim());
+               String line;
+               int 正文长度 = -1;
+               while (!(line = scanner.nextLine()).isEmpty()) {
+                   String[] kv = line.split(":");
+                   String key = kv[0].trim();
+                   String value = kv[1].trim();
+                   System.out.println("响应头: " + key + " = " + value);
+                   if (key.equalsIgnoreCase("Content-Length")) {
+                       正文长度 = Integer.valueOf(value);
+                   }
+               }
+               System.out.println(正文长度);
+               System.out.println(index);
+               /*
+               int 已经读了 = 第一次读到的数据长度 - index - 4;
+               int 还应该读 = 正文长度 - 已经读了;
+               byte[] body = new byte[正文长度];
+               System.arraycopy(bytes, index + 4, body, 0, 已经读了);
+               int 实际读了 = socket.getInputStream().read(body, 已经读了, 还应该读);
+               System.out.println(已经读了);
+               System.out.println(还应该读);
+               System.out.println(实际读了);
+               //System.out.println(new String(body, 0, body.length, "UTF-8"));
+               FileOutputStream fileOutputStream = new FileOutputStream("百度.html");
+               fileOutputStream.write(body);
+       
+                */
+           }
+       
+       }
+       
 
-7、HTTP的方法
+8、HTTP的方法
 （1）下列方法不区分大小写
-
-其中最常用的就是GET方法和POST方法.
+     GET（查询/获取资源）、 POST（插入/传输实体主体）、 PUT（修改/传输文件）、 DELETE（删除文件）
+     其中最常用的就是GET方法和POST方法.
 （2）GET方法和POST方法的区别？
          GET方法不带请求正文   /   POST方法必须带请求正文
          GET方法要带信息只能带在 query_string / segment
-         POST要带信息 带在query_string / segment / body
+         POST要带信息，可以带在query_string / segment / body
 （3） HTTP/1.0 版本如何确定正文长度？
-             1.Content—Length
-             2.关闭连接通知对方数据已经发送完毕
-          HTTP/1.1版本多了一个方法
-              Chunk（链表）
-              chunk       chunk        chunk       chunk(特殊标识)
+         1.Content—Length
+         2.关闭连接通知对方数据已经发送完毕
+      HTTP/1.1版本多了一个方法
+         Chunk（链表）
+         chunk       chunk        chunk       chunk(特殊标识)
 
  8、HTTP的状态码
-
-最常见的状态码, 比如 200(OK), 404(Not Found), 403(Forbidden), 302(Redirect, 重定向), 504(Bad Gateway)
-    2XX：    200  OK
-    3XX：    跳转
-    4XX：    400 Bad Request  404 Not Found  403没权限
-    5XX：    500 Internal Server Error
-（去查询:http 状态码）
-4XX ：       400 Bad Request  404  Not  Found（客户端错误码）  403 没权限
-必须记住：200 OK
-                  400错误请求    404资源不存在
-                  500服务器错误
-
-
+    1XX：信息性状态码
+    2XX：成功状态码           200  OK
+    3XX：重定向状态码（跳转）  302 重定向
+    4XX：客户端错误状态码     400 Bad Request错误请求、  404 Not Found资源不存在、403没权限
+    5XX：服务器错误状态码     500 Internal Server Error服务器错误
+    最常见的状态码, 比如 200(OK), 404(Not Found), 403(Forbidden), 302(Redirect, 重定向), 504(Bad Gateway)
+ 
+  必须记住：200 OK
+           400错误请求    404资源不存在
+           500服务器错误
+           
 9、HTTP常见的Header：
 
-      Content-Type:  text/html; charset=utf-8
+     Content-Type:  text/html; charset=utf-8
                                application/json; charset=utf-8
                                text/plain;  charset=utf-8  正文类型
      Content-Length:正文格式
      Host（请求）： IP+port  www.baidu.com/img.baidu.com
-    User-Agent（请求）：表明浏览器信息
-    Referer（请求）：来自什么页面
-    Location（响应）：配合301/307用的
-    Cookie（请求）：   cookie
-    Set-Cookie（响应）：
+     User-Agent（请求）：表明浏览器信息
+     Referer（请求）：来自什么页面
+     Location（响应）：配合301/307用的
+     Cookie（请求）： cookie
+     Set-Cookie（响应）：
