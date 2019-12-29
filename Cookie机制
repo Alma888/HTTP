@@ -1,0 +1,70 @@
+# HTTP
+
+重点： cookie ：
+1、  前提：http协议是没有会话保持的协议/无状态的协议
+                  请求： /login?username=peixinchen&password=123456
+              响应： 200  OK  登陆成功
+
+              请求： /login?username=chenpeixin&password=123456
+              响应： 200  OK  登陆成功
+
+              请求： /login?username=xinpeichen&password=123456
+              响应： 200  OK  登陆成功
+    请求：/profile 个人主页，带着你是谁的信息
+     （ cookie是完整的机制）
+
+2、 第一阶段：引入cookie
+
+      （1）引入Cookie的前提：HTTP是无状态的协议 /没有会话保持的协议
+              /login   Set-Cookie
+     （2）查看Cookie：在浏览器主页输入URL信息进入，在显示页面的右上角
+              有三个点，点击进入，选择更多工具的开发者工具，进入后点击开发
+              者工具的application：cookies 进行查看。
+     （3）种cookie成功后（Set-Cookie）
+              1. 浏览器（客户端）保存cookie： key=value
+              2. 在以后，访问该网页时，都会带着cookie信息，
+                  放在 request 的请求头中：Cookie：key=value
+
+3、Cookie的问题：
+ （1）Cookie其实保存在每个用户的电脑中的
+          /login?username=陈沛鑫
+          种了  cookie   username = 陈沛鑫
+ （2）修改本地文件中的cookie，把username=沛鑫陈
+ （3）/hello
+          打印沛鑫陈
+          ==》结论：因为 cookie 保存在本地，所以是不安全的（用户其实可以修
+                            改它）
+ （4）处理cookie 的不安全性：
+         A、发送给用户的  cookie  进行加密，服务器取到 cookie 后先进行解密
+         B、不是把用户的所有信息都汇总到  cookie 中
+               用户信息分为：1. 不敏感信息  2.用户的密码/用户余额
+         C、这时引入  session  机制        
+                                   
+
+（上面两个图，第一个是若修改了用户信息，则同一个客户端再向服务器发送信息的时候，服务器不知道当前用户是谁。第二个是利用session服务器配合cookie机制一起工作）                                                                                                              
+
+4、总结HTTP重点（Cookie + Session）重点中的重点
+（1）对比  Cookie  和  Session（面试题经常问）
+       【1】Cookie和Session一起搭配工作解决 HTTP 协议无状态保持的问题
+       【2】Cookie：是一套机制
+                ==>对客户端做了要求：
+                          1. 读到 Set-Cookie 响应头信息，保存 cookie
+                          2. 以后访问该网站的其他信息时（只要 cookie 没过期），都
+                              带着Cookie访问（放在HTTP请求头中，Cookie）
+               ==>在需要保持回话时（登录URL），要设置 Set-Cookie
+       【3】Session：为了解决 Cookie 全部存用户端不安全的问题
+                                把信息保存到Session服务器中，Cookie只保留 
+                                Session-id即可。
+5、Cookie的一些常用特性
+  （1）Cookie 默认只会在访问  主机(host:port) 一样的情况才带着
+                    127.0.0.1:1229/hello
+                    127.0.0.1:1229/login
+                    127.0.0.1:1229/other
+ （2）Cookie有效期
+          1.刚才我们种的cookie，会话级别的有效期（浏览器关了就没了）
+          2.Set-Cookie 可以设置  过期时间
+             比如：response.setHeader("Set-Cookie","username="+username+";expires=Tue,07-Apr- 2020 08:46:16 GMT; Max-Age=8640000");                       
+          3.对于上面的1.方式，关闭浏览器，观察cookie就不在了
+          4.种带过期时间的cookie，关闭浏览器之后，观察cookie还在
+          5.浏览器之所以能关闭之后还能发送cookie，是因为把cookie保存在本地
+             文件中。
