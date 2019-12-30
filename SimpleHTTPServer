@@ -1,0 +1,146 @@
+# HTTP
+
+//一个简单的 HTTP服务器 与 浏览器 实现连接的代码过程
+
+//第一个类：SimpleHTTPServer
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SimpleHTTPServer {
+    public static void main(String[] args) throws IOException {
+        //A、监听端口
+        ServerSocket serverSocket=new ServerSocket(1229);
+        while (true){
+            //B、接待客人,没有人来之前，是不会返回的，
+                    //返回的是一个通信 socket
+            Socket socket=serverSocket.accept();
+
+            //C、创建线程池
+                // 主线程只负责前台任务
+                // 对接客户全部交给工作线程处理
+                // 为了效率，我们采用线程池的方式管理工作线程
+            ExecutorService pool=Executors.newFixedThreadPool(10);
+             //将客人引荐给工作线程
+            pool.execute(new Task(socket) );
+        }
+    }
+}
+
+
+
+
+//第二个类：Task
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
+public class Task implements Runnable{
+    //先接待客人 Socket socket；
+    private Socket socket;
+
+    public Task(Socket socket){
+        this.socket=socket;
+    }
+
+    @Override
+    public void run() {
+        //按照TCP服务器的处理流程
+        try{
+            InputStream is=socket.getInputStream();
+            OutputStream os=socket.getOutputStream();
+            //下一步，理解客户端的输入(也就是对HTTP请求解析)
+               //先创建一个请求对象，代表客户端的输入
+            Request request=Request.parse(is);
+            System.out.println(request);
+            if (request.path.equalsIgnoreCase("/")) {
+                String body = "<h1>连接成功</h1>";
+                byte[] bodyBuffer = body.getBytes("UTF-8");
+                //组装响应
+                StringBuilder response = new StringBuilder();
+                //响应行
+                response.append("HTTP/1.0 200 OK\r\n");
+                //响应头
+                response.append("Content-Type: text/html; charset=UTF-8\r\n");
+                response.append("Content-Length: ");
+                response.append(bodyBuffer.length);
+                //空行
+                response.append("\r\n");
+                response.append("\r\n");
+                //发送
+                os.write(response.toString().getBytes("UTF-8"));
+                //响应正文body
+                os.write(bodyBuffer);
+                os.flush();
+            } else {
+                StringBuilder response = new StringBuilder();
+                response.append("HTTP/1.0 404 Not Found\r\n");
+                response.append("\r\n");
+                os.write(response.toString().getBytes("UTF-8"));
+                os.flush();
+            }
+            // 3. 处理客人的要求
+            // 4. 说让客人能理解的话
+            // 5. 把话说出去
+            // 6. 通知客人可以走了
+            socket.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+//第三个类：Request
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class Request {
+    String method;
+    String path;
+    String version;
+
+    Map<String,String> headers=new HashMap<>();
+
+
+    @Override
+    public String toString() {
+        return "Request{" +
+                "method='" + method + '\'' +
+                ", path='" + path + '\'' +
+                ", version='" + version + '\'' +
+                ", headers=" + headers +
+                '}';
+    }
+
+    //对请求开始进行解析，返回的是一个Request
+    public static Request parse(InputStream is){
+        Request request=new Request();
+        //is 是字节流，不太容易读一行，用熟悉的 Scanner 处理
+        Scanner scanner=new Scanner(is,"UTF-8");
+        //遵循HTTP请求格式
+        //解析请求行
+        String requestLine=scanner.nextLine();
+        String[] group=requestLine.split(" ");
+        request.method=group[0];
+        request.path=group[1];
+        request.version=group[2];
+        //解析请求头
+        String line;
+        while (!(line=scanner.nextLine()).isEmpty()){
+            String[] kv=line.split(":");
+            String key=kv[0].trim();//trim()方法是为了消除key两边的空格
+            String value=kv[1].trim();//同上
+            request.headers.put(key,value);
+        }
+        return request;
+    }
+}
