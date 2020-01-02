@@ -1,6 +1,6 @@
 # HTTP
 
-//一个简单的 HTTP服务器 与 浏览器 实现连接的代码过程
+//一个简单的 基于HTTP协议的服务器 与 浏览器（客户端） 实现连接的代码过程
 
 //第一个类：SimpleHTTPServer
 import java.io.IOException;
