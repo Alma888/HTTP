@@ -145,13 +145,13 @@ HTML （最开始的目的是传输超文本，但现在，基本上任何数据
            
 9、HTTP常见的Header：
 
-     Content-Type:  text/html; charset=utf-8
+     Content-Type:  text/html;（数据类型） charset=utf-8
                                application/json; charset=utf-8
                                text/plain;  charset=utf-8  正文类型
-     Content-Length:正文格式
-     Host（请求）： IP+port  www.baidu.com/img.baidu.com
-     User-Agent（请求）：表明浏览器信息
-     Referer（请求）：来自什么页面
-     Location（响应）：配合301/307用的
-     Cookie（请求）： cookie
-     Set-Cookie（响应）：
+     Content-Length:Baby的长度，正文格式
+     Host（请求）：客户端告知服务器，所请求的资源是在那个主机的哪个端口上。 IP+port  www.baidu.com/img.baidu.com
+     User-Agent（请求）：声明用户的操作系统和浏览器版本信息
+     Referer（请求）：当前页面是从哪个页面跳转过来
+     Location（响应）：搭配 3XX状态码使用，告诉客户端接下来要去哪里访问(配合301/307用)
+     Cookie（请求）： (cookie)用于在客户端存储少量信息，通常用于实现会话（session）的功能。
+     Set-Cookie（响应）：里面存着Session服务器在保存客户端的信息所返回给服务器的  Session-id（但是Set-Cookie本身存在HTTP响应的响应头中）
